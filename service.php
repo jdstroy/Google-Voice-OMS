@@ -37,7 +37,7 @@ function GetUserInfo($complex)
         $pass = $xml->password;
 
         try {
-            $gv = new GoogleVoice($user, $pass);
+            $gv = new GoogleVoice(new UsernamePasswordGCredentials($user, $pass));
             $email = $user;
             $phone = $gv->getNumber();
             $return .= '<userInfo xmlns="http://schemas.microsoft.com/office/Outlook/2006/OMS">';
@@ -75,7 +75,7 @@ function DeliverXms($complex)
         $pass = ((string)$xml->user->password);
 
         try {
-            $gv = new GoogleVoice($user, $pass);
+            $gv = new GoogleVoice(new UsernamePasswordGCredentials($user, $pass));
             $recps = $xml->xmsHead->to->recipient;
             $msgs = $xml->xmsBody->content;
             foreach ($recps as $to) {

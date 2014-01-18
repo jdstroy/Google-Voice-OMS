@@ -4,7 +4,53 @@ Version     0.3
 License     This code is released under the MIT Open Source License. Feel free to do whatever you want with it.
 Author      lostleon@gmail.com, http://www.lostleon.com/ | Modified by me@navarr.me, https://www.gvoms.com/
 LastUpdate  05/28/2010
+
+2014 Jan 18 - Modified by John Stroy to support credential caching.
 */
+class UsernamePasswordGCredentials {
+    private $loginURL = 'https://www.google.com/accounts/ClientLogin';
+    private $username;
+    private $password;
+    public function __construct($username, $password) {
+        $this->username = $username;
+        $this->password = $password;
+    }
+
+    public function getLoginAuth()
+    {
+        $login_param = "accountType=GOOGLE&Email={$this->username}&Passwd={$this->password}&service=grandcentral&source=com.lostleon.GoogleVoiceTool";
+        $ch = curl_init($this->loginURL);
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt(
+            $ch,
+            CURLOPT_USERAGENT,
+            "Mozilla/5.0 (iPhone; U; CPU iPhone OS 2_2_1 like Mac OS X; en-us) AppleWebKit/525.18.1 (KHTML, like Gecko) Version/3.1.1 Mobile/5H11 Safari/525.20"
+        );
+        //        curl_setopt($ch, CURLOPT_REFERER, $this->lastURL);
+        curl_setopt($ch, CURLOPT_POST, "application/x-www-form-urlencoded");
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $login_param);
+        $html = curl_exec($ch);
+        $this->lastURL = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+        curl_close($ch);
+        $this->login_auth = $this->match('/Auth=([A-z0-9_-]+)/', $html, 1);
+        return $this->login_auth;
+    }
+}
+
+class TokenGCredentials
+{
+    private $token;
+    public function __construct($token) {
+        $this->token = $token;
+    }
+    public function getLoginAuth() {
+        return $this->token;
+    }
+}
+
 class GoogleVoice
 {
     public $username;
@@ -15,12 +61,16 @@ class GoogleVoice
     private $inboxURL = 'https://www.google.com/voice/m/';
     private $loginURL = 'https://www.google.com/accounts/ClientLogin';
     private $smsURL = 'https://www.google.com/voice/m/sendsms';
+    private $credentials;
 
 
-    public function __construct($username, $password)
+    public function __construct($credentials)
     {
-        $this->username = $username;
-        $this->password = $password;
+        $this->credentials = $credentials;
+    }
+
+    public function getLoginAuth() {
+        return $this->credentials->getLoginAuth();
     }
 
     public function getNumber()
@@ -44,29 +94,6 @@ class GoogleVoice
             throw new RuntimeException('Could Not Detect Phone Number');
         }
         return "1{$num}";
-    }
-
-    public function getLoginAuth()
-    {
-        $login_param = "accountType=GOOGLE&Email={$this->username}&Passwd={$this->password}&service=grandcentral&source=com.lostleon.GoogleVoiceTool";
-        $ch = curl_init($this->loginURL);
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt(
-            $ch,
-            CURLOPT_USERAGENT,
-            "Mozilla/5.0 (iPhone; U; CPU iPhone OS 2_2_1 like Mac OS X; en-us) AppleWebKit/525.18.1 (KHTML, like Gecko) Version/3.1.1 Mobile/5H11 Safari/525.20"
-        );
-        curl_setopt($ch, CURLOPT_REFERER, $this->lastURL);
-        curl_setopt($ch, CURLOPT_POST, "application/x-www-form-urlencoded");
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $login_param);
-        $html = curl_exec($ch);
-        $this->lastURL = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
-        curl_close($ch);
-        $this->login_auth = $this->match('/Auth=([A-z0-9_-]+)/', $html, 1);
-        return $this->login_auth;
     }
 
     public function get_rnr_se()
